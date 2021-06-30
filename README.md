@@ -1,6 +1,6 @@
 # grapes
 image processing project with matlab
-![](counting_grapes.jpg)
+![](img/pipeline.jpg)
 
 ## More info
 Image Processing: 
@@ -21,5 +21,3 @@ Image Processing:
 	- connected components analysis
 * Finding rotten grapes
 	- unsupervised colour clustering
-	
-![](masking_grapes.jpg)
