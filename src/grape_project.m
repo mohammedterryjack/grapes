@@ -1,13 +1,10 @@
 network = denoisingNetwork('dncnn');
 
-colour_image = imread('grapes/252.jpg');
+colour_image = imread('grapes/18.jpg');
 %imshow(colour_image)
 
 small_image = imresize(colour_image,.2);
 %imshow(small_image)
-
-%[red_image,green_image,blue_image] = imsplit(small_image);
-%TODO: remove all but RED Channel
 
 grey_image = rgb2gray(small_image);
 %imshow(grey_image)
@@ -71,37 +68,52 @@ grapes_only_image = xor(bwareaopen(segmented_binary_image,minimum_pixel_size),  
 %imshow(grapes_only_image)
 
 [B,L] = bwboundaries(grapes_only_image,'noholes');
-imshow(label2rgb(L,@jet,[.5 .5 .5]))
+%imshow(label2rgb(L,@jet,[.5 .5 .5]))
 hold on
 for k = 1:length(B)
   boundary = B{k};
-  plot(boundary(:,2),boundary(:,1),'w','LineWidth',2)
+  %plot(boundary(:,2),boundary(:,1),'w','LineWidth',2)
 end
 
 masked_image = bsxfun(@times, small_image, cast(grapes_only_image, 'like', small_image));
-imshow(masked_image)
-
-%+++++++NOW WE HAVE REMOVED THE BACKGROUND OBJECTS AND IDENTIFIED THE
-%GRAPES LETS GROUP THEM BY COLOUR
-
-%image_lab = rgb2lab(masked_image);
-%ab = image_lab(:,:,2:3);
-%ab = im2single(ab);
-%nColors = 2;
-%pixel_labels = imsegkmeans(masked_image,nColors,'NumAttempts',4);
-%imshow(pixel_labels,[])
-
-%diseased_grapes_mask = pixel_labels==2;
-%diseased_grapes_image = masked_image .* uint8(diseased_grapes_mask);
-%imshow(diseased_grapes_image)
+%imshow(masked_image)
 
 %+++++++LETS COUNT THEM
-
 grapes = bwconncomp(grapes_only_image,4);
 grapes.NumObjects
 
 grape_mask = false(size(grapes_only_image));
 grape_mask(grapes.PixelIdxList{1}) = true;
 % imshow(grape_mask)
-deseased_grape_image = bsxfun(@times, small_image, cast(grape_mask, 'like', small_image));
-% imshow(deseased_grape_image)
+healthy_grape_image = bsxfun(@times, small_image, cast(grape_mask, 'like', small_image));
+%imshow(healthy_grape_image)
+
+%+++++++ LETS COUNT THE ROTTEN ONES
+
+red = masked_image(:,:,1);
+green = masked_image(:,:,2);
+blue = masked_image(:,:,3);
+rMask = red > 250;
+gMask = green < 180;
+bMask = blue < 180;
+red_object_filter = uint8(rMask & gMask & bMask); 
+red_objects_image = zeros(size(red_object_filter),'uint8');
+red_objects_image(:,:,1) = masked_image(:,:,1) .* red_object_filter;
+red_objects_image(:,:,2) = masked_image(:,:,2) .* red_object_filter;
+red_objects_image(:,:,3) = masked_image(:,:,3) .* red_object_filter;
+imshow(red_objects_image)
+
+red_image_mask = edge(rgb2gray(red_objects_image),'sobel',threshold * fuzziness);
+red_image_mask = imdilate(red_image_mask,[se90 se0]);
+red_image_mask = imfill(red_image_mask,'holes');
+imshow(red_image_mask)
+minimum_pixel_size = 100;
+maximum_pixel_size = 600;
+red_image_mask = xor(bwareaopen(red_image_mask,minimum_pixel_size),  bwareaopen(red_image_mask,maximum_pixel_size));
+%imshow(red_image_mask)
+
+rotten_grapes = bwconncomp(red_image_mask,4);
+rotten_grapes.NumObjects
+
+rotten_grapes_image = bsxfun(@times, small_image, cast(red_image_mask, 'like', small_image));
+imshow(rotten_grapes_image)
